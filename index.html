@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartEMI - Advanced Loan & Interest Calculator</title>
+  <meta name="description" content="Calculate your monthly Equated Monthly Installment (EMI), total interest payable, and full loan amortization schedule for home, car, personal, or education loans." />
+  <meta property="og:title" content="SmartEMI - Advanced Loan & Interest Calculator" />
+  <meta property="og:description" content="Free interactive EMI Calculator with real-time interest updates, loan comparison, visual principal breakdown, and downloadable PDF reports." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://smartemi-calculator.example.com/" />
+  
+  <!-- Fonts & Libraries -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-surface: #1e293b;
+      --bg-secondary: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-dark: #0284c7;
+      --accent-green: #34d399;
+      --accent-orange: #fb923c;
+      --border: #334155;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --radius: 14px;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-secondary: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --accent-green: #10b981;
+      --accent-orange: #ea580c;
+      --border: #e2e8f0;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; transition: background-color 0.25s, color 0.25s, border-color 0.25s; }
+    body { background-color: var(--bg-primary); color: var(--text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Sticky Modern Header */
+    header { position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); z-index: 1000; backdrop-filter: blur(8px); }
+    .nav-container { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; }
+    .logo { font-size: 1.35rem; font-weight: 700; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px; letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 1.75rem; list-style: none; align-items: center; }
+    .nav-links a { color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+    .nav-links a:hover, .nav-links a.active { color: var(--primary); }
+    .theme-toggle { background: var(--bg-secondary); border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 20px; cursor: pointer; color: var(--text-main); font-size: 0.9rem; }
+    .hamburger { display: none; background: none; border: none; font-size: 1.5rem; color: var(--text-main); cursor: pointer; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; flex: 1; width: 100%; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* Loan Quick Select Tabs */
+    .loan-tabs { display: flex; gap: 0.5rem; background: var(--bg-secondary); padding: 0.4rem; border-radius: 10px; margin-bottom: 1.5rem; overflow-x: auto; }
+    .tab-btn { flex: 1; padding: 0.6rem 1rem; border: none; background: transparent; color: var(--text-muted); font-weight: 600; font-size: 0.85rem; border-radius: 8px; cursor: pointer; white-space: nowrap; text-align: center; }
+    .tab-btn.active { background: var(--bg-surface); color: var(--primary); box-shadow: var(--shadow); }
+
+    /* Cards & Framework */
+    .card { background: var(--bg-surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 2rem; box-shadow: var(--shadow); margin-bottom: 2rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+
+    /* Inputs & Custom Sliders */
+    .input-group { margin-bottom: 1.75rem; }
+    .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .input-header label { font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; }
+    .input-header input[type="number"] { width: 140px; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-primary); color: var(--text-main); text-align: right; font-weight: 700; font-size: 1rem; }
+    .tenure-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg-primary); margin-left: 0.5rem; }
+    .tenure-toggle button { padding: 0.2rem 0.6rem; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; font-weight: 600; }
+    .tenure-toggle button.active { background: var(--primary); color: #fff; }
+    
+    input[type="range"] { width: 100%; height: 8px; background: var(--bg-secondary); border-radius: 4px; outline: none; -webkit-appearance: none; cursor: pointer; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 2px solid var(--bg-surface); box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+
+    /* Stats & Results Display */
+    .stat-card { background: var(--bg-secondary); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .stat-val { font-size: 1.75rem; font-weight: 700; margin-top: 0.3rem; color: var(--primary); letter-spacing: -0.5px; }
+    .stat-val.orange { color: var(--accent-orange); }
+    .stat-val.green { color: var(--accent-green); }
+
+    /* Buttons & Actions */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--primary); color: #fff; border: none; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+    .btn:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-main); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-group { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+
+    /* Table Styles & Scroll */
+    .table-container { overflow-x: auto; max-height: 450px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem; }
+    th, td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { background: var(--bg-secondary); font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    tbody tr:hover { background: var(--bg-secondary); }
+
+    /* FAQs & Accordions */
+    .faq-item { border-bottom: 1px solid var(--border); padding: 1rem 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
+    .faq-a { display: none; margin-top: 0.6rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-q::after { content: "−"; }
+    .faq-q::after { content: "+"; font-size: 1.3rem; color: var(--primary); }
+
+    /* Form Design */
+    .form-control { margin-bottom: 1.25rem; }
+    .form-control label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.9rem; }
+    .form-control input, .form-control textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-primary); color: var(--text-main); font-size: 0.95rem; }
+
+    /* Blog Card Styling */
+    .blog-card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg-surface); display: flex; flex-direction: column; justify-content: space-between; }
+    .blog-content { padding: 1.5rem; flex: 1; }
+    .blog-content h3 { margin-bottom: 0.75rem; font-size: 1.15rem; color: var(--text-main); }
+
+    /* Ad Placeholder Slots */
+    .ad-slot { background: var(--bg-secondary); border: 1px dashed var(--border); border-radius: 8px; padding: 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: 1.5rem 0; letter-spacing: 0.5px; }
+
+    /* Footer Framework */
+    footer { background: var(--bg-surface); border-top: 1px solid var(--border); padding: 3rem 1.5rem 1.5rem 1.5rem; margin-top: auto; }
+    .footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 2.5rem; }
+    .footer-col h4 { margin-bottom: 1rem; color: var(--primary); font-size: 1rem; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 0.5rem; }
+    .footer-col ul li a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+    .footer-col ul li a:hover { color: var(--primary); }
+    .footer-bottom { max-width: 1200px; margin: 2.5rem auto 0 auto; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+    /* Media Queries */
+    @media (max-width: 992px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 650px) {
+      .hamburger { display: block; }
+      .nav-links { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-surface); flex-direction: column; padding: 1.5rem; border-bottom: 1px solid var(--border); }
+      .nav-links.active { display: flex; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Navbar -->
+  <header>
+    <div class="nav-container">
+      <a href="#home" class="logo" onclick="navigateTo('home')">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        SmartEMI
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#home" class="nav-item active" onclick="navigateTo('home')">Calculator</a></li>
+        <li><a href="#about" class="nav-item" onclick="navigateTo('about')">About</a></li>
+        <li><a href="#blog" class="nav-item" onclick="navigateTo('blog')">Blog</a></li>
+        <li><a href="#faq" class="nav-item" onclick="navigateTo('faq')">FAQ</a></li>
+        <li><a href="#contact" class="nav-item" onclick="navigateTo('contact')">Contact</a></li>
+        <li>
+          <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">☀️ Light</button>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- PAGE 1: HOME (CALCULATOR HUB) -->
+    <section id="home" class="page-section active">
+      <div style="text-align: center; max-width: 800px; margin: 0 auto 2rem auto;">
+        <h1 style="font-size: 2.4rem; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Smart EMI & Amortization Calculator</h1>
+        <p style="color: var(--text-muted);">Calculate exact monthly loan repayments, total interest payable, and generate structured payment schedules in real time.</p>
+      </div>
+
+      <!-- Quick Loan Selection Tabs -->
+      <div class="loan-tabs">
+        <button class="tab-btn active" onclick="selectLoanType('home')">🏠 Home Loan</button>
+        <button class="tab-btn" onclick="selectLoanType('car')">🚗 Car Loan</button>
+        <button class="tab-btn" onclick="selectLoanType('personal')">💳 Personal Loan</button>
+        <button class="tab-btn" onclick="selectLoanType('education')">🎓 Education Loan</button>
+      </div>
+
+      <!-- Main Calculator Card -->
+      <div class="card" id="printable-area">
+        <div class="grid-2">
+          <!-- Left: Input Control Dashboard -->
+          <div>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Loan Parameters</h2>
+            
+            <!-- Loan Amount -->
+            <div class="input-group">
+              <div class="input-header">
+                <label for="loan-amount-num">Loan Amount (₹)</label>
+                <input type="number" id="loan-amount-num" value="2500000" min="10000" max="50000000" step="10000" />
+              </div>
+              <input type="range" id="loan-amount-range" value="2500000" min="10000" max="50000000" step="10000" aria-label="Loan Amount Slider" />
+            </div>
+
+            <!-- Interest Rate -->
+            <div class="input-group">
+              <div class="input-header">
+                <label for="interest-rate-num">Interest Rate (% p.a.)</label>
+                <input type="number" id="interest-rate-num" value="8.5" min="1" max="30" step="0.1" />
+              </div>
+              <input type="range" id="interest-rate-range" value="8.5" min="1" max="30" step="0.1" aria-label="Interest Rate Slider" />
+            </div>
+
+            <!-- Tenure -->
+            <div class="input-group">
+              <div class="input-header">
+                <label for="tenure-num">
+                  Loan Tenure
+                  <span class="tenure-toggle">
+                    <button id="tenure-yr-btn" class="active" onclick="setTenureMode('yr')">Yr</button>
+                    <button id="tenure-mo-btn" onclick="setTenureMode('mo')">Mo</button>
+                  </span>
+                </label>
+                <input type="number" id="tenure-num" value="20" min="1" max="30" step="1" />
+              </div>
+              <input type="range" id="tenure-range" value="20" min="1" max="30" step="1" aria-label="Tenure Slider" />
+            </div>
+
+            <!-- Action Controls -->
+            <div class="btn-group">
+              <button class="btn" onclick="exportPDF()">📄 PDF Report</button>
+              <button class="btn btn-secondary" onclick="exportExcel()">📊 Excel Sheet</button>
+              <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+            </div>
+          </div>
+
+          <!-- Right: Summary & Chart Visualizer -->
+          <div>
+            <div class="grid-3" style="margin-bottom: 1.5rem;">
+              <div class="stat-card">
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Monthly EMI</div>
+                <div class="stat-val" id="res-emi">₹21,696</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Total Interest</div>
+                <div class="stat-val orange" id="res-interest">₹27,07,040</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Total Payment</div>
+                <div class="stat-val green" id="res-total">₹52,07,040</div>
+              </div>
+            </div>
+
+            <!-- Donut Chart Container -->
+            <div style="max-width: 280px; margin: 0 auto;">
+              <canvas id="emiChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Amortization Schedule Table -->
+        <div style="margin-top: 2.5rem;">
+          <h3 style="margin-bottom: 0.75rem;">Comprehensive Amortization Schedule</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Detailed monthly breakdown of principal reduction and interest payouts throughout your tenure.</p>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>EMI Payment</th>
+                  <th>Principal Paid</th>
+                  <th>Interest Paid</th>
+                  <th>Outstanding Balance</th>
+                </tr>
+              </thead>
+              <tbody id="schedule-tbody">
+                <!-- Javascript Dynamic Population -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust Badges -->
+      <div class="grid-4" style="margin-bottom: 2rem;">
+        <div class="stat-card" style="text-align: left;">
+          <h4 style="color: var(--primary);">Instant Calculation</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Algorithms calculate outcomes on every slider movement with zero delays.</p>
+        </div>
+        <div class="stat-card" style="text-align: left;">
+          <h4 style="color: var(--accent-green);">100% Client-Side Privacy</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Your financial details stay inside your local browser storage—never sent to servers.</p>
+        </div>
+        <div class="stat-card" style="text-align: left;">
+          <h4 style="color: var(--accent-orange);">Banking-Grade Formulas</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Uses official standard reducing balance formulas applied by leading NBFCs.</p>
+        </div>
+        <div class="stat-card" style="text-align: left;">
+          <h4 style="color: var(--primary);">Full Schedule Export</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Export monthly breakdowns to PDF or Excel spreadsheets with a single click.</p>
+        </div>
+      </div>
+
+      <!-- Ad Slot Placeholder Container -->
+      <div class="ad-slot">[ Responsive Advertisement Space ]</div>
+
+      <!-- Educational Content: How EMI Works -->
+      <div class="card">
+        <h2>How Equated Monthly Installments (EMI) Work</h2>
+        <p style="margin-top: 0.75rem; color: var(--text-muted);">An Equated Monthly Installment (EMI) is a fixed payment amount made by a borrower to a lender at a specified date each calendar month. EMIs are applied to both interest and principal each month so that over a specified number of years, the loan is fully paid off.</p>
+        
+        <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0; font-family: monospace; font-size: 0.95rem; border: 1px solid var(--border);">
+          EMI = [P x R x (1+R)^N] / [(1+R)^N - 1]
+        </div>
+        
+        <p style="font-size: 0.9rem; color: var(--text-muted);"><strong>Where:</strong><br>
+        • <strong>P</strong> = Principal loan amount requested<br>
+        • <strong>R</strong> = Monthly interest rate (Annual Interest Rate divided by 12 months divided by 100)<br>
+        • <strong>N</strong> = Total number of monthly installments (Loan tenure in years multiplied by 12)</p>
+      </div>
+
+      <!-- Loan Comparison Section -->
+      <div class="card">
+        <h2>Comparing Key Loan Categories</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Loan Category</th>
+                <th>Typical Interest Rate</th>
+                <th>Standard Tenure</th>
+                <th>Processing Fee Range</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Home Loan</strong></td>
+                <td>8.25% - 9.50% p.a.</td>
+                <td>Up to 30 Years</td>
+                <td>0.25% - 0.50%</td>
+              </tr>
+              <tr>
+                <td><strong>Car Loan</strong></td>
+                <td>8.75% - 11.00% p.a.</td>
+                <td>Up to 7 Years</td>
+                <td>0.50% - 1.00%</td>
+              </tr>
+              <tr>
+                <td><strong>Personal Loan</strong></td>
+                <td>10.50% - 18.00% p.a.</td>
+                <td>Up to 5 Years</td>
+                <td>1.00% - 2.50%</td>
+              </tr>
+              <tr>
+                <td><strong>Education Loan</strong></td>
+                <td>9.00% - 12.50% p.a.</td>
+                <td>Up to 15 Years</td>
+                <td>0.50% - 1.50%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FAQ Accordion -->
+      <div class="card">
+        <h2>Frequently Asked Questions</h2>
+        <div id="home-faq-container" style="margin-top: 1rem;"></div>
+      </div>
+    </section>
+
+    <!-- PAGE 2: ABOUT -->
+    <section id="about" class="page-section">
+      <div class="card">
+        <h1>About SmartEMI</h1>
+        <p style="margin-top: 1rem; color: var(--text-muted);">SmartEMI was developed to provide consumers with absolute clarity and mathematical precision when borrowing money for home ownership, automobiles, personal expansion, or higher education.</p>
+        
+        <h2 style="margin-top: 2rem;">Our Engineering Focus</h2>
+        <p style="margin-top: 0.5rem; color: var(--text-muted);">Borrowing money is one of the most critical financial decisions an individual makes. Unexpected amortization curves, compounding interest calculations, and hidden charges can obscure the true cost of credit. Our mission is to offer completely free, accessible, fast, and transparent computational tools to eliminate guesswork.</p>
+
+        <div class="grid-3" style="margin-top: 2rem;">
+          <div class="stat-card" style="text-align: left;">
+            <h4 style="color: var(--primary);">Financial Transparency</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Exposing exact interest payout costs across multi-year cycles.</p>
+          </div>
+          <div class="stat-card" style="text-align: left;">
+            <h4 style="color: var(--primary);">Zero Tracking</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">We store no sensitive customer financial records on servers.</p>
+          </div>
+          <div class="stat-card" style="text-align: left;">
+            <h4 style="color: var(--primary);">Open Accessibility</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Designed for maximum usability across all smartphones, tablets, and desktop computers.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 3: CONTACT -->
+    <section id="contact" class="page-section">
+      <div class="grid-2">
+        <div class="card">
+          <h1>Contact Financial Support</h1>
+          <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Have questions or feedback regarding our loan models?</p>
+          
+          <form id="contact-form" onsubmit="handleContactSubmit(event)">
+            <div class="form-control">
+              <label for="c-name">Full Name</label>
+              <input type="text" id="c-name" required placeholder="Alex Turner" />
+            </div>
+            <div class="form-control">
+              <label for="c-email">Email Address</label>
+              <input type="email" id="c-email" required placeholder="alex@example.com" />
+            </div>
+            <div class="form-control">
+              <label for="c-msg">Message</label>
+              <textarea id="c-msg" rows="5" required placeholder="How can our tool assist you today?"></textarea>
+            </div>
+            <button type="submit" class="btn">Submit Inquiry</button>
+            <div id="form-feedback" style="margin-top: 1rem; color: var(--accent-green); display: none;">Thank you! Your request has been logged successfully.</div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Corporate Office Details</h2>
+          <p style="margin-top: 1rem; color: var(--text-muted);"><strong>Address:</strong> Financial District, Building 4, 3rd Floor, Tech Park Way</p>
+          <p style="margin-top: 0.5rem; color: var(--text-muted);"><strong>Support Desk:</strong> support@smartemi-calculator.example.com</p>
+          <p style="margin-top: 0.5rem; color: var(--text-muted);"><strong>Phone:</strong> +1 (800) 890-2134</p>
+          
+          <div class="ad-slot" style="margin-top: 2rem;">[ Sidebar Ad Unit ]</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 4: BLOG -->
+    <section id="blog" class="page-section">
+      <div id="blog-list-view">
+        <h1 style="margin-bottom: 1.5rem;">Borrowing & Credit Strategy Blog</h1>
+        <div class="grid-3">
+          <div class="blog-card">
+            <div class="blog-content">
+              <h3>How EMI is Calculated</h3>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Deconstruct the mathematicalreducing balance formula and understand how your principal shifts over time.</p>
+              <button class="btn btn-secondary" onclick="showArticle(1)">Read Article</button>
+            </div>
+          </div>
+          <div class="blog-card">
+            <div class="blog-content">
+              <h3>Reduce Your EMI Burden — Proven Tips</h3>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">Learn actionable techniques to lower your total interest payouts through partial prepayments.</p>
+              <button class="btn btn-secondary" onclick="showArticle(2)">Read Article</button>
+            </div>
+          </div>
+          <div class="blog-card">
+            <div class="blog-content">
+              <h3>Fixed vs Floating Interest Rate</h3>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">A full structural breakdown comparing predictable rate locks against variable benchmark rates.</p>
+              <button class="btn btn-secondary" onclick="showArticle(3)">Read Article</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Article Detail 1 -->
+      <article id="blog-art-1" style="display: none;" class="card">
+        <button class="btn btn-secondary" style="width: auto; margin-bottom: 1rem;" onclick="hideArticles()">← Back to Articles</button>
+        <h1>How EMI is Calculated: Deconstructing the Math</h1>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <p>When you secure a loan from a bank or financial institution, your repayment is structured into Equated Monthly Installments (EMIs). While the monthly payout remains identical, the allocation of that money toward interest versus principal undergoes continuous change.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">The Reducing Balance Method</h3>
+          <p>Most commercial loans run on a reducing balance basis. Under this model, interest for the current month is calculated exclusively on the outstanding balance at that moment. During early loan cycles, because the outstanding balance is high, the interest portion forms the largest segment of your payment. As principal balance diminishes, monthly interest drops proportionally, allowing a larger slice of your payment to pay down principal.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">Mathematical Proof</h3>
+          <p>Understanding this math allows borrowers to see why making extra prepayments during early loan years delivers maximum interest savings.</p>
+        </div>
+      </article>
+
+      <!-- Article Detail 2 -->
+      <article id="blog-art-2" style="display: none;" class="card">
+        <button class="btn btn-secondary" style="width: auto; margin-bottom: 1rem;" onclick="hideArticles()">← Back to Articles</button>
+        <h1>Reduce Your EMI Burden: Proven Strategies</h1>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <p>High monthly installment payments can strain household budgets. Implementing structured strategies can drastically cut overall interest costs and speed up debt-free milestones.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">1. Execute Strategic Partial Prepayments</h3>
+          <p>Allocating annual employment bonuses or tax refunds toward partial principal prepayments lowers your total outstanding loan balance immediately. Because subsequent interest calculations use the smaller balance, your overall tenure drops significantly.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">2. Refinance via Balance Transfer</h3>
+          <p>If market interest rates fall or your credit score improves significantly, explore transferring your high-interest balance to another lender offering lower annual rates.</p>
+        </div>
+      </article>
+
+      <!-- Article Detail 3 -->
+      <article id="blog-art-3" style="display: none;" class="card">
+        <button class="btn btn-secondary" style="width: auto; margin-bottom: 1rem;" onclick="hideArticles()">← Back to Articles</button>
+        <h1>Fixed vs. Floating Interest Rates: Making the Right Choice</h1>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <p>One of the vital decisions when finalizing a loan agreement is choosing between fixed and floating interest rate structures.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">Fixed Interest Rates</h3>
+          <p>Fixed rate loans lock in your interest rate for the entire tenure or a designated period. This delivers complete payment predictability and shields your household budget from central bank rate hikes.</p>
+          <h3 style="margin-top: 1rem; color: var(--text-main);">Floating Interest Rates</h3>
+          <p>Floating rate loans move dynamically with external financial market benchmarks (such as repo rates). When interest rate cycles drop, your overall interest cost automatically declines without requiring loan refinancing.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- PAGE 5: PRIVACY POLICY -->
+    <section id="privacy" class="page-section">
+      <div class="card">
+        <h1>Privacy Policy</h1>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Updated: September 14, 2026</p>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <h3>1. Zero Data Retention Policy</h3>
+          <p>SmartEMI processes financial numbers strictly client-side within your internet browser. Inputs entered into loan calculation forms are never stored or transmitted to external servers.</p>
+          
+          <h3 style="margin-top: 1rem;">2. Cookies & Advertising</h3>
+          <p>We may use cookies and browser storage solutions to remember basic user settings like theme preferences (Dark vs. Light Mode). Third-party advertising partners, such as Google AdSense, may use tracking cookies to deliver contextually relevant advertisements.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 6: TERMS & CONDITIONS -->
+    <section id="terms" class="page-section">
+      <div class="card">
+        <h1>Terms & Conditions</h1>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Effective Date: September 14, 2026</p>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <h3>1. Usage Terms</h3>
+          <p>By using the SmartEMI suite of tools, you accept that calculations represent mathematical projections intended for informational planning. Actual lending figures are dictated by individual agreements with banking institutions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 7: DISCLAIMER -->
+    <section id="disclaimer" class="page-section">
+      <div class="card">
+        <h1>Financial & Lending Disclaimer</h1>
+        <div style="margin-top: 1rem; color: var(--text-muted);">
+          <p><strong>For Illustration Purposes Only:</strong> All calculations provided by SmartEMI are estimates intended for educational and general financial planning purposes. Exact loan approval rates, interest charges, processing fees, and amortization policies vary across commercial banks and Non-Banking Financial Companies (NBFCs).</p>
+          <p style="margin-top: 1rem;">Always request an official sanction letter and binding repayment schedule from your financial provider before entering binding loan contracts.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 8: FAQ -->
+    <section id="faq" class="page-section">
+      <div class="card">
+        <h1>Frequently Asked Questions (FAQ)</h1>
+        <div id="full-faq-container" style="margin-top: 1.5rem;"></div>
+      </div>
+    </section>
+
+    <!-- PAGE 9: 404 -->
+    <section id="404" class="page-section">
+      <div class="card" style="text-align: center; padding: 4rem 1rem;">
+        <h1 style="font-size: 4rem; color: var(--primary);">404</h1>
+        <h2>Page Not Found</h2>
+        <p style="margin: 1rem 0 2rem 0; color: var(--text-muted);">The requested page or URL route does not exist.</p>
+        <button class="btn" style="width: auto; margin: 0 auto;" onclick="navigateTo('home')">Return to Calculator Home</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-col">
+        <a href="#home" class="logo" onclick="navigateTo('home')">SmartEMI</a>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Fast, private, and mathematically precise financial tools for smart borrowing and debt management.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Sitemap</h4>
+        <ul>
+          <li><a href="#home" onclick="navigateTo('home')">EMI Calculator</a></li>
+          <li><a href="#about" onclick="navigateTo('about')">About Us</a></li>
+          <li><a href="#blog" onclick="navigateTo('blog')">Knowledge Blog</a></li>
+          <li><a href="#faq" onclick="navigateTo('faq')">FAQ</a></li>
+          <li><a href="#contact" onclick="navigateTo('contact')">Contact Support</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#privacy" onclick="navigateTo('privacy')">Privacy Policy</a></li>
+          <li><a href="#terms" onclick="navigateTo('terms')">Terms & Conditions</a></li>
+          <li><a href="#disclaimer" onclick="navigateTo('disclaimer')">Disclaimer</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Social Links</h4>
+        <ul>
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">Twitter / X</a></li>
+          <li><a href="#">Facebook</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      &copy; <span id="copyright-year"></span> SmartEMI Calculator. All rights reserved.
+    </div>
+  </footer>
+
+  <script>
+    /* FAQ Knowledge Base (8 Questions) */
+    const faqData = [
+      { q: "What is an EMI?", a: "An Equated Monthly Installment (EMI) is a fixed payment amount made by a borrower to a lender at a specified date each calendar month." },
+      { q: "How is EMI calculated?", a: "EMI is calculated using the formula: EMI = P × r × (1+r)^n / ((1+r)^n − 1), where P is principal, r is monthly interest rate, and n is total months." },
+      { q: "What happens when I make prepayments?", a: "Prepayments reduce your outstanding principal balance directly, lowering total interest costs and shortening your remaining loan tenure." },
+      { q: "Does a higher interest rate drastically change EMI?", a: "Yes, because compounding applies to your remaining principal balance each month, even small percentage changes yield significant long-term differences." },
+      { q: "What is the difference between tenure in years vs months?", a: "Loan tenure in years represents annual terms, while months represent individual repayment cycles. Multiplying years by 12 yields total payment cycles." },
+      { q: "Are processing fees included in the EMI calculation?", a: "No, processing fees are upfront charges levied by banks during loan origination and are separate from recurring monthly EMIs." },
+      { q: "Can EMI change during a floating rate loan?", a: "Yes, if benchmark rates shift, lenders adjust either your monthly EMI amount or extend/shorten overall repayment tenure." },
+      { q: "How does credit score impact my loan EMI?", a: "Higher credit scores typically qualify you for lower interest rates, reducing your monthly EMI burden and total payable interest." }
+    ];
+
+    /* App State */
+    let tenureMode = 'yr'; // 'yr' or 'mo'
+    let emiChartInstance = null;
+
+    /* Theme Controls */
+    const themeBtn = document.getElementById('theme-toggle');
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      themeBtn.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      localStorage.setItem('theme', target);
+      themeBtn.textContent = target === 'dark' ? '☀️ Light' : '🌙 Dark';
+      updateCalculations();
+    });
+
+    /* Navigation Controller */
+    function navigateTo(pageId) {
+      const pages = ['home', 'about', 'contact', 'blog', 'privacy', 'terms', 'disclaimer', 'faq', '404'];
+      const target = pages.includes(pageId) ? pageId : '404';
+
+      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+
+      document.querySelectorAll('.nav-item').forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === `#${target}`);
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('nav-links').classList.remove('active');
+    }
+
+    /* Loan Preset Tabs */
+    function selectLoanType(type) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (type === 'home') {
+        setInputs(2500000, 8.5, 20, 'yr');
+      } else if (type === 'car') {
+        setInputs(800000, 9.5, 5, 'yr');
+      } else if (type === 'personal') {
+        setInputs(300000, 12.5, 3, 'yr');
+      } else if (type === 'education') {
+        setInputs(1000000, 9.0, 7, 'yr');
+      }
+    }
+
+    function setInputs(amt, rate, tenure, mode) {
+      document.getElementById('loan-amount-num').value = amt;
+      document.getElementById('loan-amount-range').value = amt;
+      document.getElementById('interest-rate-num').value = rate;
+      document.getElementById('interest-rate-range').value = rate;
+      setTenureMode(mode);
+      document.getElementById('tenure-num').value = tenure;
+      document.getElementById('tenure-range').value = tenure;
+      updateCalculations();
+    }
+
+    /* Input Synchronization */
+    function bindPair(numId, rangeId) {
+      const num = document.getElementById(numId);
+      const range = document.getElementById(rangeId);
+      num.addEventListener('input', () => { range.value = num.value; updateCalculations(); });
+      range.addEventListener('input', () => { num.value = range.value; updateCalculations(); });
+    }
+
+    /* Tenure Mode Handler */
+    function setTenureMode(mode) {
+      tenureMode = mode;
+      const yrBtn = document.getElementById('tenure-yr-btn');
+      const moBtn = document.getElementById('tenure-mo-btn');
+      const tenureNum = document.getElementById('tenure-num');
+      const tenureRange = document.getElementById('tenure-range');
+
+      if (mode === 'yr') {
+        yrBtn.classList.add('active');
+        moBtn.classList.remove('active');
+        tenureNum.max = 30;
+        tenureRange.max = 30;
+      } else {
+        moBtn.classList.add('active');
+        yrBtn.classList.remove('active');
+        tenureNum.max = 360;
+        tenureRange.max = 360;
+      }
+      updateCalculations();
+    }
+
+    /* Core EMI & Amortization Math */
+    function calculateEMI(principal, annualRate, tenureValue, mode) {
+      const totalMonths = mode === 'yr' ? tenureValue * 12 : tenureValue;
+      const monthlyRate = annualRate / 12 / 100;
+      
+      let emi = 0;
+      if (monthlyRate > 0) {
+        emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+      } else {
+        emi = principal / totalMonths;
+      }
+
+      const totalPayment = emi * totalMonths;
+      const totalInterest = totalPayment - principal;
+
+      let schedule = [];
+      let balance = principal;
+
+      for (let m = 1; m <= totalMonths; m++) {
+        const interestPaid = balance * monthlyRate;
+        const principalPaid = emi - interestPaid;
+        balance -= principalPaid;
+        if (balance < 0) balance = 0;
+
+        schedule.push({
+          month: m,
+          emi: Math.round(emi),
+          principal: Math.round(principalPaid),
+          interest: Math.round(interestPaid),
+          balance: Math.round(balance)
+        });
+      }
+
+      return {
+        emi: Math.round(emi),
+        totalInterest: Math.round(totalInterest),
+        totalPayment: Math.round(totalPayment),
+        schedule
+      };
+    }
+
+    function formatCurrency(val) {
+      return '₹' + val.toLocaleString('en-IN');
+    }
+
+    /* View Updates */
+    function updateCalculations() {
+      const amt = parseFloat(document.getElementById('loan-amount-num').value) || 0;
+      const rate = parseFloat(document.getElementById('interest-rate-num').value) || 0;
+      const tenure = parseFloat(document.getElementById('tenure-num').value) || 0;
+
+      const res = calculateEMI(amt, rate, tenure, tenureMode);
+
+      document.getElementById('res-emi').textContent = formatCurrency(res.emi);
+      document.getElementById('res-interest').textContent = formatCurrency(res.totalInterest);
+      document.getElementById('res-total').textContent = formatCurrency(res.totalPayment);
+
+      // Populate Table
+      const tbody = document.getElementById('schedule-tbody');
+      tbody.innerHTML = '';
+      res.schedule.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>Month ${row.month}</td>
+          <td>${formatCurrency(row.emi)}</td>
+          <td>${formatCurrency(row.principal)}</td>
+          <td>${formatCurrency(row.interest)}</td>
+          <td><strong>${formatCurrency(row.balance)}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      renderChart(amt, res.totalInterest);
+    }
+
+    /* Chart Renderer */
+    function renderChart(principal, interest) {
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const textColor = isDark ? '#94a3b8' : '#475569';
+      const ctx = document.getElementById('emiChart').getContext('2d');
+
+      if (emiChartInstance) emiChartInstance.destroy();
+
+      emiChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Principal Loan Amount', 'Total Interest'],
+          datasets: [{
+            data: [principal, interest],
+            backgroundColor: ['#38bdf8', '#fb923c'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: textColor } }
+          }
+        }
+      });
+    }
+
+    /* Exports */
+    function exportPDF() {
+      const element = document.getElementById('printable-area');
+      const opt = {
+        margin: 0.4,
+        filename: 'SmartEMI-Loan-Schedule.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function exportExcel() {
+      const table = document.querySelector(".table-container table");
+      const wb = XLSX.utils.table_to_book(table, { sheet: "Amortization Schedule" });
+      XLSX.writeFile(wb, "SmartEMI-Amortization-Schedule.xlsx");
+    }
+
+    /* Render FAQs */
+    function renderFAQ(containerId, limit = null) {
+      const container = document.getElementById(containerId);
+      const items = limit ? faqData.slice(0, limit) : faqData;
+      container.innerHTML = items.map(item => `
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">${item.q}</div>
+          <div class="faq-a">${item.a}</div>
+        </div>
+      `).join('');
+    }
+
+    /* Article Toggle */
+    function showArticle(id) {
+      document.getElementById('blog-list-view').style.display = 'none';
+      document.querySelectorAll('#blog article').forEach(a => a.style.display = 'none');
+      document.getElementById(`blog-art-${id}`).style.display = 'block';
+    }
+    function hideArticles() {
+      document.querySelectorAll('#blog article').forEach(a => a.style.display = 'none');
+      document.getElementById('blog-list-view').style.display = 'block';
+    }
+
+    /* Form Handler */
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      document.getElementById('form-feedback').style.display = 'block';
+      document.getElementById('contact-form').reset();
+    }
+
+    /* Listeners & Initialization */
+    document.getElementById('hamburger').addEventListener('click', () => {
+      document.getElementById('nav-links').classList.toggle('active');
+    });
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      navigateTo(hash || 'home');
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('copyright-year').textContent = new Date().getFullYear();
+      initTheme();
+
+      bindPair('loan-amount-num', 'loan-amount-range');
+      bindPair('interest-rate-num', 'interest-rate-range');
+      bindPair('tenure-num', 'tenure-range');
+
+      updateCalculations();
+      renderFAQ('home-faq-container', 4);
+      renderFAQ('full-faq-container');
+
+      const initialHash = window.location.hash.replace('#', '');
+      if (initialHash) navigateTo(initialHash);
+    });
+  </script>
+</body>
+</html>
